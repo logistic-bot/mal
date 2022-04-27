@@ -32,10 +32,10 @@ def entry_point(argv):
         except reader.Blank:
             continue
         except types.MalException as e:
-            print(u"Error: %s" % printer._pr_str(e.object, False))
+            print(f"Error: {printer._pr_str(e.object, False)}")
         except Exception as e:
-            print("Error: %s" % e)
-            #print("".join(traceback.format_exception(*sys.exc_info())))
+            print(f"Error: {e}")
+                    #print("".join(traceback.format_exception(*sys.exc_info())))
     return 0
 
 # _____ Define and setup target ___

@@ -28,8 +28,8 @@ def entry_point(argv):
         except EOFError as e:
             break
         except Exception as e:
-            print("Error: %s" % e)
-            #print("".join(traceback.format_exception(*sys.exc_info())))
+            print(f"Error: {e}")
+                    #print("".join(traceback.format_exception(*sys.exc_info())))
     return 0
 
 # _____ Define and setup target ___

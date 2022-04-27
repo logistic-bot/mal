@@ -32,9 +32,7 @@ def eval_ast(ast: MalExpression, env: Env) -> MalExpression:
     if isinstance(ast, MalVector):
         return MalVector([EVAL(x, env) for x in ast.native()])
     if isinstance(ast, MalHash_map):
-        new_dict = {}  # type: Dict[str, MalExpression]
-        for key in ast.native():
-            new_dict[key] = EVAL(ast.native()[key], env)
+        new_dict = {key: EVAL(ast.native()[key], env) for key in ast.native()}
         return MalHash_map(new_dict)
     return ast
 
@@ -61,7 +59,7 @@ def quasiquote(ast: MalExpression) -> MalExpression:
         return qq_foldr(lst)
     elif isinstance(ast, MalVector):
         return MalList([MalSymbol("vec"), qq_foldr(ast.native())])
-    elif isinstance(ast, MalSymbol) or isinstance(ast, MalHash_map):
+    elif isinstance(ast, (MalSymbol, MalHash_map)):
         return MalList([MalSymbol("quote"), ast])
     else:
         return ast
@@ -230,7 +228,7 @@ def is_macro_call(ast: MalExpression, env: Env) -> bool:
     try:
         x = env.get(ast.native()[0].native())
         try:
-            assert isinstance(x, MalFunctionRaw) or isinstance(x, MalFunctionCompiled)
+            assert isinstance(x, (MalFunctionRaw, MalFunctionCompiled))
         except AssertionError:
             return False
         return x.is_macro()  # type: ignore
@@ -244,9 +242,7 @@ def macroexpand(ast: MalExpression, env: Env) -> MalExpression:
             return ast
         assert isinstance(ast, MalList)
         macro_func = env.get(ast.native()[0].native())
-        assert isinstance(macro_func, MalFunctionRaw) or isinstance(
-            macro_func, MalFunctionCompiled
-        )
+        assert isinstance(macro_func, (MalFunctionRaw, MalFunctionCompiled))
         ast = macro_func.call(ast.native()[1:])
         continue
 
@@ -257,7 +253,7 @@ def rep_handling_exceptions(line: str, repl_env: Env) -> str:
     except MalUnknownSymbolException as e:
         return "'" + e.func + "' not found"
     except MalException as e:
-        return "ERROR: " + str(e)
+        return f"ERROR: {str(e)}"
 
 
 if __name__ == "__main__":

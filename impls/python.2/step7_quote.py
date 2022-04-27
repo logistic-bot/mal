@@ -57,9 +57,7 @@ def eval_ast(ast: MalExpression, env: Env) -> MalExpression:
     if isinstance(ast, MalVector):
         return MalVector([EVAL(x, env) for x in ast.native()])
     if isinstance(ast, MalHash_map):
-        new_dict = {}  # type: Dict[str, MalExpression]
-        for key in ast.native():
-            new_dict[key] = EVAL(ast.native()[key], env)
+        new_dict = {key: EVAL(ast.native()[key], env) for key in ast.native()}
         return MalHash_map(new_dict)
     return ast
 
@@ -86,7 +84,7 @@ def quasiquote(ast: MalExpression) -> MalExpression:
         return qq_foldr(lst)
     elif isinstance(ast, MalVector):
         return MalList([MalSymbol("vec"), qq_foldr(ast.native())])
-    elif isinstance(ast, MalSymbol) or isinstance(ast, MalHash_map):
+    elif isinstance(ast, (MalSymbol, MalHash_map)):
         return MalList([MalSymbol("quote"), ast])
     else:
         return ast
@@ -209,6 +207,6 @@ if __name__ == "__main__":
             except MalUnknownSymbolException as e:
                 print("'" + e.func + "' not found")
             except MalSyntaxException as e:
-                print("ERROR: invalid syntax: " + str(e))
+                print(f"ERROR: invalid syntax: {str(e)}")
         except EOFError:
             eof = True

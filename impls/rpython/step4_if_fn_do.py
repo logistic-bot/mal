@@ -18,67 +18,56 @@ def eval_ast(ast, env):
         assert isinstance(ast, MalSym)
         return env.get(ast)
     elif types._list_Q(ast):
-        res = []
-        for a in ast.values:
-            res.append(EVAL(a, env))
+        res = [EVAL(a, env) for a in ast.values]
         return MalList(res)
     elif types._vector_Q(ast):
-        res = []
-        for a in ast.values:
-            res.append(EVAL(a, env))
+        res = [EVAL(a, env) for a in ast.values]
         return MalVector(res)
     elif types._hash_map_Q(ast):
-        new_dct = {}
-        for k in ast.dct.keys():
-            new_dct[k] = EVAL(ast.dct[k], env)
+        new_dct = {k: EVAL(ast.dct[k], env) for k in ast.dct.keys()}
         return MalHashMap(new_dct)
     else:
         return ast  # primitive value, return unchanged
 
 def EVAL(ast, env):
-        #print("EVAL %s" % printer._pr_str(ast))
-        if not types._list_Q(ast):
-            return eval_ast(ast, env)
+    #print("EVAL %s" % printer._pr_str(ast))
+    if not types._list_Q(ast):
+        return eval_ast(ast, env)
 
-        # apply list
-        if len(ast) == 0: return ast
-        a0 = ast[0]
-        if isinstance(a0, MalSym):
-            a0sym = a0.value
+    # apply list
+    if len(ast) == 0: return ast
+    a0 = ast[0]
+    a0sym = a0.value if isinstance(a0, MalSym) else u"__<*fn*>__"
+    if a0sym == u"def!":
+        a1, a2 = ast[1], ast[2]
+        res = EVAL(a2, env)
+        return env.set(a1, res)
+    elif a0sym == u"let*":
+        a1, a2 = ast[1], ast[2]
+        let_env = Env(env)
+        for i in range(0, len(a1), 2):
+            let_env.set(a1[i], EVAL(a1[i+1], let_env))
+        return EVAL(a2, let_env)
+    elif a0sym == u"do":
+        el = eval_ast(ast.rest(), env)
+        return el.values[-1]
+    elif a0sym == u"if":
+        a1, a2 = ast[1], ast[2]
+        cond = EVAL(a1, env)
+        if cond is nil or cond is false:
+            return EVAL(ast[3], env) if len(ast) > 3 else nil
         else:
-            a0sym = u"__<*fn*>__"
-
-        if u"def!" == a0sym:
-            a1, a2 = ast[1], ast[2]
-            res = EVAL(a2, env)
-            return env.set(a1, res)
-        elif u"let*" == a0sym:
-            a1, a2 = ast[1], ast[2]
-            let_env = Env(env)
-            for i in range(0, len(a1), 2):
-                let_env.set(a1[i], EVAL(a1[i+1], let_env))
-            return EVAL(a2, let_env)
-        elif u"do" == a0sym:
-            el = eval_ast(ast.rest(), env)
-            return el.values[-1]
-        elif u"if" == a0sym:
-            a1, a2 = ast[1], ast[2]
-            cond = EVAL(a1, env)
-            if cond is nil or cond is false:
-                if len(ast) > 3: return EVAL(ast[3], env)
-                else:            return nil
-            else:
-                return EVAL(a2, env)
-        elif u"fn*" == a0sym:
-            a1, a2 = ast[1], ast[2]
-            return MalFunc(None, a2, env, a1, EVAL)
+            return EVAL(a2, env)
+    elif a0sym == u"fn*":
+        a1, a2 = ast[1], ast[2]
+        return MalFunc(None, a2, env, a1, EVAL)
+    else:
+        el = eval_ast(ast, env)
+        f = el.values[0]
+        if isinstance(f, MalFunc):
+            return f.apply(el.rest())
         else:
-            el = eval_ast(ast, env)
-            f = el.values[0]
-            if isinstance(f, MalFunc):
-                return f.apply(el.rest())
-            else:
-                raise Exception("%s is not callable" % f)
+            raise Exception(f"{f} is not callable")
 
 # print
 def PRINT(exp):

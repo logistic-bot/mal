@@ -17,51 +17,45 @@ def eval_ast(ast, env):
         assert isinstance(ast, MalSym)
         return env.get(ast)
     elif types._list_Q(ast):
-        res = []
-        for a in ast.values:
-            res.append(EVAL(a, env))
+        res = [EVAL(a, env) for a in ast.values]
         return MalList(res)
     elif types._vector_Q(ast):
-        res = []
-        for a in ast.values:
-            res.append(EVAL(a, env))
+        res = [EVAL(a, env) for a in ast.values]
         return MalVector(res)
     elif types._hash_map_Q(ast):
-        new_dct = {}
-        for k in ast.dct.keys():
-            new_dct[k] = EVAL(ast.dct[k], env)
+        new_dct = {k: EVAL(ast.dct[k], env) for k in ast.dct.keys()}
         return MalHashMap(new_dct)
     else:
         return ast  # primitive value, return unchanged
 
 def EVAL(ast, env):
-        #print("EVAL %s" % printer._pr_str(ast))
-        if not types._list_Q(ast):
-            return eval_ast(ast, env)
+    #print("EVAL %s" % printer._pr_str(ast))
+    if not types._list_Q(ast):
+        return eval_ast(ast, env)
 
-        # apply list
-        if len(ast) == 0: return ast
-        a0 = ast[0]
-        if not isinstance(a0, MalSym):
-            raise Exception("attempt to apply on non-symbol")
+    # apply list
+    if len(ast) == 0: return ast
+    a0 = ast[0]
+    if not isinstance(a0, MalSym):
+        raise Exception("attempt to apply on non-symbol")
 
-        if u"def!" == a0.value:
-            a1, a2 = ast[1], ast[2]
-            res = EVAL(a2, env)
-            return env.set(a1, res)
-        elif u"let*" == a0.value:
-            a1, a2 = ast[1], ast[2]
-            let_env = Env(env)
-            for i in range(0, len(a1), 2):
-                let_env.set(a1[i], EVAL(a1[i+1], let_env))
-            return EVAL(a2, let_env)
+    if a0.value == u"def!":
+        a1, a2 = ast[1], ast[2]
+        res = EVAL(a2, env)
+        return env.set(a1, res)
+    elif a0.value == u"let*":
+        a1, a2 = ast[1], ast[2]
+        let_env = Env(env)
+        for i in range(0, len(a1), 2):
+            let_env.set(a1[i], EVAL(a1[i+1], let_env))
+        return EVAL(a2, let_env)
+    else:
+        el = eval_ast(ast, env)
+        f = el.values[0]
+        if isinstance(f, MalFunc):
+            return f.apply(el.values[1:])
         else:
-            el = eval_ast(ast, env)
-            f = el.values[0]
-            if isinstance(f, MalFunc):
-                return f.apply(el.values[1:])
-            else:
-                raise Exception("%s is not callable" % f)
+            raise Exception(f"{f} is not callable")
 
 # print
 def PRINT(exp):
@@ -108,10 +102,10 @@ def entry_point(argv):
         except reader.Blank:
             continue
         except types.MalException as e:
-            print(u"Error: %s" % printer._pr_str(e.object, False))
+            print(f"Error: {printer._pr_str(e.object, False)}")
         except Exception as e:
-            print("Error: %s" % e)
-            #print("".join(traceback.format_exception(*sys.exc_info())))
+            print(f"Error: {e}")
+                    #print("".join(traceback.format_exception(*sys.exc_info())))
     return 0
 
 # _____ Define and setup target ___

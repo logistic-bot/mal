@@ -40,10 +40,7 @@ def dissoc(src_hm, *keys):
     return hm
 
 def get(hm, key):
-    if hm is not None:
-        return hm.get(key)
-    else:
-        return None
+    return hm.get(key) if hm is not None else None
 
 def contains_Q(hm, key): return key in hm
 
@@ -64,20 +61,18 @@ def nth(lst, idx):
     else: throw("nth: index out of range")
 
 def first(lst):
-    if types._nil_Q(lst): return None
-    else: return lst[0]
+    return None if types._nil_Q(lst) else lst[0]
 
 def rest(lst):
-    if types._nil_Q(lst): return List([])
-    else: return List(lst[1:])
+    return List([]) if types._nil_Q(lst) else List(lst[1:])
 
 def empty_Q(lst): return len(lst) == 0
 
 def count(lst):
-    if types._nil_Q(lst): return 0
-    else: return len(lst)
+    return 0 if types._nil_Q(lst) else len(lst)
 
-def apply(f, *args): return f(*(list(args[0:-1])+args[-1]))
+def apply(f, *args):
+    return f(*list(args[:-1]) + args[-1])
 
 def mapf(f, lst): return List(map(f, lst))
 
@@ -97,8 +92,8 @@ def seq(obj):
     elif types._vector_Q(obj):
         return List(obj) if len(obj) > 0 else None
     elif types._string_Q(obj):
-        return List([c for c in obj]) if len(obj) > 0 else None
-    elif obj == None:
+        return List(list(obj)) if len(obj) > 0 else None
+    elif obj is None:
         return None
     else: throw ("seq: called on non-sequence")
 

@@ -30,28 +30,21 @@ class MalString(MalExpression):
         # print("STR: " + input_value)
         if is_already_encoded:
             self._value = input_value
-        if keyword:
-            self._value = "\u029e" + input_value
-        else:
-            self._value = input_value
+        self._value = f"ʞ{input_value}" if keyword else input_value
 
     def readable_str(self) -> str:
         if self.is_keyword():
-            return ":" + self._value[1:]
-        else:
-            val = self._value
+            return f":{self._value[1:]}"
+        val = self._value
 
-            val = val.replace("\\", "\\\\")  # escape backslashes
-            val = val.replace("\n", "\\n")  # escape newlines
-            val = val.replace('"', '\\"')  # escape quotes
-            val = '"' + val + '"'  # add surrounding quotes
-            return val
+        val = val.replace("\\", "\\\\")  # escape backslashes
+        val = val.replace("\n", "\\n")  # escape newlines
+        val = val.replace('"', '\\"')  # escape quotes
+        val = '"' + val + '"'  # add surrounding quotes
+        return val
 
     def unreadable_str(self) -> str:
-        if self.is_keyword():
-            return ":" + self._value[1:]
-        else:
-            return self._value
+        return f":{self._value[1:]}" if self.is_keyword() else self._value
 
     def native(self) -> Any:
         return self._value
@@ -80,7 +73,7 @@ class MalSymbol(MalExpression):
     def __init__(self, value: str) -> None:
         assert type(value) is str
 
-        self._value = str(value)
+        self._value = value
 
     def readable_str(self) -> str:
         return str(self._value)
@@ -106,7 +99,7 @@ class MalException(Exception, MalExpression):
 
 class MalIndexError(MalException):
     def __init__(self, index: int) -> None:
-        super().__init__(MalString("Index out of bounds: " + str(index)))
+        super().__init__(MalString(f"Index out of bounds: {index}"))
 
 
 class MalSyntaxException(MalException):
@@ -122,7 +115,7 @@ class MalUnknownTypeException(MalException):
 class MalInvalidArgumentException(MalException):
     def __init__(self, arg: MalExpression, reason: str) -> None:
         super().__init__(
-            MalString(arg.readable_str() + ": invalid argument: " + reason)
+            MalString(f"{arg.readable_str()}: invalid argument: {reason}")
         )
 
 
@@ -134,7 +127,7 @@ class MalUnknownSymbolException(MalException):
 
 class MalNotImplementedException(MalException):
     def __init__(self, func: str) -> None:
-        super().__init__(MalString("not implemented: " + func))
+        super().__init__(MalString(f"not implemented: {func}"))
 
 
 class MalFunctionCompiled(MalExpression):
@@ -233,15 +226,19 @@ class MalHash_map(MalExpression):
     def readable_str(self) -> str:
         result_list: List[str] = []
         for x in self._dict:
-            result_list.append(MalString(x).readable_str())
-            result_list.append(self._dict[x].readable_str())
+            result_list.extend((MalString(x).readable_str(), self._dict[x].readable_str()))
         return "{" + " ".join(result_list) + "}"
 
     def unreadable_str(self) -> str:
         result_list: List[str] = []
         for x in self._dict:
-            result_list.append(MalString(x, is_already_encoded=True).unreadable_str())
-            result_list.append(self._dict[x].unreadable_str())
+            result_list.extend(
+                (
+                    MalString(x, is_already_encoded=True).unreadable_str(),
+                    self._dict[x].unreadable_str(),
+                )
+            )
+
         return "{" + " ".join(result_list) + "}"
 
     def native(self) -> Dict[str, MalExpression]:
@@ -267,9 +264,7 @@ class MalBoolean(MalExpression):
         self._value = value
 
     def readable_str(self) -> str:
-        if self._value:
-            return "true"
-        return "false"
+        return "true" if self._value else "false"
 
     def native(self) -> bool:
         return self._value
@@ -283,7 +278,7 @@ class MalAtom(MalExpression):
         return self._value
 
     def readable_str(self) -> str:
-        return "(atom " + str(self._value) + ")"
+        return f"(atom {str(self._value)})"
 
     def reset(self, value: MalExpression) -> None:
         self._value = value

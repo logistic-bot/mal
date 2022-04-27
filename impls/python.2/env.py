@@ -15,7 +15,7 @@ class Env(object):
         self._outer = outer
         self._data: Dict[str, MalExpression] = {}
         if binds is not None and exprs is not None:
-            for x in range(0, len(binds)):
+            for x in range(len(binds)):
                 assert isinstance(binds[x], MalSymbol)
                 if binds[x].native() == "&":
                     self.set(str(binds[x + 1]), MalList(exprs[x:]))
@@ -47,6 +47,6 @@ class Env(object):
     def __repr__(self) -> str:
         env_str = "{"
         for d in self._data:
-            env_str += str(d) + ": " + str(self._data[d]) + ", "
+            env_str += f"{str(d)}: {str(self._data[d])}, "
         env_str += "}"
         return f"environment: (data: {env_str} outer: {repr(self._outer) if self._outer is not None else 'None'})"

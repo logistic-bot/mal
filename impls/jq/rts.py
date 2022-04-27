@@ -67,12 +67,19 @@ def get_one(fd):
 
 def main(args):
     args = [
-        "jq", "--argjson", "DEBUG", json.dumps(DEBUG), "-nrRM",
+        "jq",
+        "--argjson",
+        "DEBUG",
+        json.dumps(DEBUG),
+        "-nrRM",
         "-f",
-        dirname(realpath(__file__)) + "/" + environ.get("STEP", "stepA_mal") + ".jq",
+        f"{dirname(realpath(__file__))}/"
+        + environ.get("STEP", "stepA_mal")
+        + ".jq",
         "--args",
-        *args
+        *args,
     ]
+
     # print(args)
     sin_pipe  = pipe()
     sout_pipe = pipe()
@@ -99,9 +106,7 @@ def main(args):
             try:
                 if HALT:
                     break
-                cmd = get_one(msin)
-                # print(cmd)
-                if cmd:
+                if cmd := get_one(msin):
                     process(json.loads(cmd)[1], msout)
             except KeyboardInterrupt:
                 exit()

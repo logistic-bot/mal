@@ -22,10 +22,7 @@ def qq_foldr(seq):
 
 def quasiquote(ast):
     if types._list_Q(ast):
-        if len(ast) == 2 and ast[0] == u'unquote':
-            return ast[1]
-        else:
-            return qq_foldr(ast)
+        return ast[1] if len(ast) == 2 and ast[0] == u'unquote' else qq_foldr(ast)
     elif types._hash_map_Q(ast) or types._symbol_Q(ast):
         return types._list(types._symbol(u'quote'), ast)
     elif types._vector_Q (ast):
@@ -70,11 +67,11 @@ def EVAL(ast, env):
         if len(ast) == 0: return ast
         a0 = ast[0]
 
-        if "def!" == a0:
+        if a0 == "def!":
             a1, a2 = ast[1], ast[2]
             res = EVAL(a2, env)
             return env.set(a1, res)
-        elif "let*" == a0:
+        elif a0 == "let*":
             a1, a2 = ast[1], ast[2]
             let_env = Env(env)
             for i in range(0, len(a1), 2):
@@ -82,33 +79,32 @@ def EVAL(ast, env):
             ast = a2
             env = let_env
             # Continue loop (TCO)
-        elif "quote" == a0:
+        elif a0 == "quote":
             return ast[1]
-        elif "quasiquoteexpand" == a0:
+        elif a0 == "quasiquoteexpand":
             return quasiquote(ast[1]);
-        elif "quasiquote" == a0:
+        elif a0 == "quasiquote":
             ast = quasiquote(ast[1]);
             # Continue loop (TCO)
-        elif 'defmacro!' == a0:
+        elif a0 == 'defmacro!':
             func = types._clone(EVAL(ast[2], env))
             func._ismacro_ = True
             return env.set(ast[1], func)
-        elif 'macroexpand' == a0:
+        elif a0 == 'macroexpand':
             return macroexpand(ast[1], env)
-        elif "do" == a0:
+        elif a0 == "do":
             eval_ast(ast[1:-1], env)
             ast = ast[-1]
             # Continue loop (TCO)
-        elif "if" == a0:
+        elif a0 == "if":
             a1, a2 = ast[1], ast[2]
             cond = EVAL(a1, env)
             if cond is None or cond is False:
-                if len(ast) > 3: ast = ast[3]
-                else:            ast = None
+                ast = ast[3] if len(ast) > 3 else None
             else:
                 ast = a2
-            # Continue loop (TCO)
-        elif "fn*" == a0:
+                    # Continue loop (TCO)
+        elif a0 == "fn*":
             a1, a2 = ast[1], ast[2]
             return types._function(EVAL, Env, a2, env, a1)
         else:
@@ -147,7 +143,7 @@ if len(sys.argv) >= 2:
 while True:
     try:
         line = mal_readline.readline("user> ")
-        if line == None: break
+        if line is None: break
         if line == "": continue
         print(REP(line))
     except reader.Blank: continue

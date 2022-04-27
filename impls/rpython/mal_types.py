@@ -27,9 +27,7 @@ def _equal_Q(a, b):
         return a.value == b.value
     elif _list_Q(a) or _vector_Q(a):
         if len(a) != len(b): return False
-        for i in range(len(a)):
-            if not _equal_Q(a[i], b[i]): return False
-        return True
+        return all(_equal_Q(a[i], b[i]) for i in range(len(a)))
     elif _hash_map_Q(a):
         assert isinstance(a, MalHashMap)
         assert isinstance(b, MalHashMap)
@@ -50,7 +48,7 @@ def _equal_Q(a, b):
     elif a is b:
         return True
     else:
-        throw_str("no = op defined for %s" % a.__class__.__name__)
+        throw_str(f"no = op defined for {a.__class__.__name__}")
 
 def _sequential_Q(seq): return _list_Q(seq) or _vector_Q(seq)
 
@@ -141,14 +139,13 @@ def _keyword(mstr):
     assert isinstance(mstr, MalType)
     if isinstance(mstr, MalStr):
         val = mstr.value
-        if val[0] == u"\u029e": return mstr
-        else:                   return MalStr(u"\u029e" + val)
+        return mstr if val[0] == u"\u029e" else MalStr(f"ʞ{val}")
     else:
         throw_str("_keyword called on non-string")
 # Create keyword from unicode string
 def _keywordu(strn):
     assert isinstance(strn, unicode)
-    return MalStr(u"\u029e" + strn)
+    return MalStr(f"ʞ{strn}")
 def _keyword_Q(exp):
     if isinstance(exp, MalStr) and len(exp.value) > 0:
         return exp.value[0] == u"\u029e"
@@ -184,7 +181,7 @@ class MalList(MalMeta):
         assert isinstance(i, int)
         return self.values[i]
     def slice(self, start):
-        return MalList(self.values[start:len(self.values)])
+        return MalList(self.values[start:])
     def slice2(self, start, end):
         assert end >= 0
         return MalList(self.values[start:end])

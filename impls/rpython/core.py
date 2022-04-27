@@ -13,8 +13,7 @@ import printer
 
 # General functions
 def wrap_tf(tf):
-    if tf: return true
-    else:  return false
+    return true if tf else false
 
 def do_equal(args): return wrap_tf(types._equal_Q(args[0], args[1]))
 
@@ -45,24 +44,20 @@ def macro_Q(args): return wrap_tf(types._function_Q(args[0]) and args[0].ismacro
 
 # String functions
 def pr_str(args):
-    parts = []
-    for exp in args.values: parts.append(printer._pr_str(exp, True))
+    parts = [printer._pr_str(exp, True) for exp in args.values]
     return MalStr(u" ".join(parts))
 
 def do_str(args):
-    parts = []
-    for exp in args.values: parts.append(printer._pr_str(exp, False))
+    parts = [printer._pr_str(exp, False) for exp in args.values]
     return MalStr(u"".join(parts))
 
 def prn(args):
-    parts = []
-    for exp in args.values: parts.append(printer._pr_str(exp, True))
+    parts = [printer._pr_str(exp, True) for exp in args.values]
     print(u" ".join(parts))
     return nil
 
 def println(args):
-    parts = []
-    for exp in args.values: parts.append(printer._pr_str(exp, False))
+    parts = [printer._pr_str(exp, False) for exp in args.values]
     print(u" ".join(parts))
     return nil
 
@@ -170,10 +165,7 @@ def get(args):
     elif isinstance(obj, MalHashMap):
         if not isinstance(key, MalStr):
             throw_str("get called on hash-map with non-string/non-keyword key")
-        if obj and key.value in obj.dct:
-            return obj.dct[key.value]
-        else:
-            return nil
+        return obj.dct[key.value] if obj and key.value in obj.dct else nil
     elif isinstance(obj, MalList):
         if not isinstance(key, MalInt):
             throw_str("get called on list/vector with non-string/non-keyword key")
@@ -189,8 +181,7 @@ def contains_Q(args):
 
 def keys(args):
     hm = args[0]
-    keys = []
-    for k in hm.dct.keys(): keys.append(MalStr(k))
+    keys = [MalStr(k) for k in hm.dct.keys()]
     return MalList(keys)
 
 def vals(args):
@@ -268,8 +259,7 @@ def first(args):
         return nil
     elif not isinstance(a0, MalList):
         throw_str("first called with non-list/non-vector")
-    if len(a0) == 0: return nil
-    else:            return a0[0]
+    return nil if len(a0) == 0 else a0[0]
 
 def rest(args):
     a0 = args[0]
@@ -277,24 +267,21 @@ def rest(args):
         return MalList([])
     elif not isinstance(a0, MalList):
         throw_str("rest called with non-list/non-vector")
-    if len(a0) == 0: return MalList([])
-    else:            return a0.rest()
+    return MalList([]) if len(a0) == 0 else a0.rest()
 
 def apply(args):
     f, fargs = args[0], args.rest()
     last_arg = fargs.values[-1]
     if not isinstance(last_arg, MalList):
         throw_str("map called with non-list")
-    all_args = fargs.values[0:-1] + last_arg.values
+    all_args = fargs.values[:-1] + last_arg.values
     return f.apply(MalList(all_args))
 
 def mapf(args):
     f, lst = args[0], args[1]
     if not isinstance(lst, MalList):
         throw_str("map called with non-list")
-    res = []
-    for a in lst.values:
-        res.append(f.apply(MalList([a])))
+    res = [f.apply(MalList([a])) for a in lst.values]
     return MalList(res)
 
 # retains metadata
@@ -315,11 +302,9 @@ def conj(args):
 def seq(args):
     a0 = args[0]
     if isinstance(a0, MalVector):
-        if len(a0) == 0: return nil
-        return MalList(a0.values)
+        return nil if len(a0) == 0 else MalList(a0.values)
     elif isinstance(a0, MalList):
-        if len(a0) == 0: return nil
-        return a0
+        return nil if len(a0) == 0 else a0
     elif types._string_Q(a0):
         assert isinstance(a0, MalStr)
         if len(a0) == 0: return nil

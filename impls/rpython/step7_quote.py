@@ -45,19 +45,13 @@ def eval_ast(ast, env):
         assert isinstance(ast, MalSym)
         return env.get(ast)
     elif types._list_Q(ast):
-        res = []
-        for a in ast.values:
-            res.append(EVAL(a, env))
+        res = [EVAL(a, env) for a in ast.values]
         return MalList(res)
     elif types._vector_Q(ast):
-        res = []
-        for a in ast.values:
-            res.append(EVAL(a, env))
+        res = [EVAL(a, env) for a in ast.values]
         return MalVector(res)
     elif types._hash_map_Q(ast):
-        new_dct = {}
-        for k in ast.dct.keys():
-            new_dct[k] = EVAL(ast.dct[k], env)
+        new_dct = {k: EVAL(ast.dct[k], env) for k in ast.dct.keys()}
         return MalHashMap(new_dct)
     else:
         return ast  # primitive value, return unchanged
@@ -71,35 +65,31 @@ def EVAL(ast, env):
         # apply list
         if len(ast) == 0: return ast
         a0 = ast[0]
-        if isinstance(a0, MalSym):
-            a0sym = a0.value
-        else:
-            a0sym = u"__<*fn*>__"
-
-        if u"def!" == a0sym:
+        a0sym = a0.value if isinstance(a0, MalSym) else u"__<*fn*>__"
+        if a0sym == u"def!":
             a1, a2 = ast[1], ast[2]
             res = EVAL(a2, env)
             return env.set(a1, res)
-        elif u"let*" == a0sym:
+        elif a0sym == u"let*":
             a1, a2 = ast[1], ast[2]
             let_env = Env(env)
             for i in range(0, len(a1), 2):
                 let_env.set(a1[i], EVAL(a1[i+1], let_env))
             ast = a2
             env = let_env # Continue loop (TCO)
-        elif u"quote" == a0sym:
+        elif a0sym == u"quote":
             return ast[1]
-        elif u"quasiquoteexpand" == a0sym:
+        elif a0sym == u"quasiquoteexpand":
             return quasiquote(ast[1])
-        elif u"quasiquote" == a0sym:
+        elif a0sym == u"quasiquote":
             ast = quasiquote(ast[1]) # Continue loop (TCO)
-        elif u"do" == a0sym:
+        elif a0sym == u"do":
             if len(ast) == 0:
                 return nil
             elif len(ast) > 1:
                 eval_ast(ast.slice2(1, len(ast)-1), env)
             ast = ast[-1] # Continue loop (TCO)
-        elif u"if" == a0sym:
+        elif a0sym == u"if":
             a1, a2 = ast[1], ast[2]
             cond = EVAL(a1, env)
             if cond is nil or cond is false:
@@ -107,20 +97,19 @@ def EVAL(ast, env):
                 else:            return nil
             else:
                 ast = a2 # Continue loop (TCO)
-        elif u"fn*" == a0sym:
+        elif a0sym == u"fn*":
             a1, a2 = ast[1], ast[2]
             return MalFunc(None, a2, env, a1, EVAL)
         else:
             el = eval_ast(ast, env)
             f = el.values[0]
-            if isinstance(f, MalFunc):
-                if f.ast:
-                    ast = f.ast
-                    env = f.gen_env(el.rest()) # Continue loop (TCO)
-                else:
-                    return f.apply(el.rest())
+            if not isinstance(f, MalFunc):
+                raise Exception(f"{f} is not callable")
+            if f.ast:
+                ast = f.ast
+                env = f.gen_env(el.rest()) # Continue loop (TCO)
             else:
-                raise Exception("%s is not callable" % f)
+                return f.apply(el.rest())
 
 # print
 def PRINT(exp):

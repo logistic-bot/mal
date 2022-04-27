@@ -129,10 +129,9 @@ class Runner():
                 self.buf += new_data.replace("\r", "")
                 for prompt in prompts:
                     regexp = re.compile(prompt)
-                    match = regexp.search(self.buf)
-                    if match:
+                    if match := regexp.search(self.buf):
                         end = match.end()
-                        buf = self.buf[0:match.start()]
+                        buf = self.buf[:match.start()]
                         self.buf = self.buf[end:]
                         self.last_prompt = prompt
                         return buf
@@ -173,12 +172,12 @@ class TestReader:
             line = self.data.pop(0)
             if re.match(r"^\s*$", line):   # blank line
                 continue
-            elif line[0:3] == ";;;":       # ignore comment
+            elif line[:3] == ";;;":       # ignore comment
                 continue
-            elif line[0:2] == ";;":        # output comment
+            elif line[:2] == ";;":        # output comment
                 self.msg = line[3:]
                 return True
-            elif line[0:5] == ";>>> ":     # settings/commands
+            elif line[:5] == ";>>> ":     # settings/commands
                 settings = {}
                 exec(line[5:], {}, settings)
                 if 'soft' in settings:
@@ -190,19 +189,19 @@ class TestReader:
                     self.optional = "\nSkipping optional tests"
                     return True
                 continue
-            elif line[0:1] == ";":         # unexpected comment
+            elif line[:1] == ";":         # unexpected comment
                 raise Exception("Test data error at line %d:\n%s" % (self.line_num, line))
             self.form = line   # the line is a form to send
 
             # Now find the output and return value
             while self.data:
                 line = self.data[0]
-                if line[0:3] == ";=>":
+                if line[:3] == ";=>":
                     self.ret = line[3:]
                     self.line_num += 1
                     self.data.pop(0)
                     break
-                elif line[0:2] == ";/":
+                elif line[:2] == ";/":
                     self.out = self.out + line[2:] + sep
                     self.line_num += 1
                     self.data.pop(0)
@@ -214,7 +213,7 @@ class TestReader:
         if self.out[-1:] == sep and not self.ret:
             # If there is no return value, output should not end in
             # separator
-            self.out = self.out[0:-1]
+            self.out = self.out[:-1]
         return self.form
 
 args = parser.parse_args(sys.argv[1:])
@@ -234,13 +233,13 @@ t = TestReader(args.test_file)
 def assert_prompt(runner, prompts, timeout):
     # Wait for the initial prompt
     header = runner.read_to_prompt(prompts, timeout=timeout)
-    if not header == None:
-        if header:
-            log("Started with:\n%s" % header)
-    else:
-        log("Did not receive one of following prompt(s): %s" % repr(prompts))
-        log("    Got      : %s" % repr(r.buf))
+    if header is None:
+        log(f"Did not receive one of following prompt(s): {repr(prompts)}")
+        log(f"    Got      : {repr(r.buf)}")
         sys.exit(1)
+
+    elif header:
+        log("Started with:\n%s" % header)
 
 
 # Wait for the initial prompt
@@ -254,7 +253,7 @@ except:
 
 # Send the pre-eval code if any
 if args.pre_eval:
-    sys.stdout.write("RUNNING pre-eval: %s" % args.pre_eval)
+    sys.stdout.write(f"RUNNING pre-eval: {args.pre_eval}")
     r.writeline(args.pre_eval)
     assert_prompt(r, ['[^\s()<>]+> '], args.test_timeout)
 
@@ -280,15 +279,18 @@ while t.next():
         log(t.msg)
         continue
 
-    if t.form == None: continue
+    if t.form is None: continue
 
-    log("TEST: %s -> [%s,%s]" % (repr(t.form), repr(t.out), t.ret), end='')
+    log(f"TEST: {repr(t.form)} -> [{repr(t.out)},{t.ret}]", end='')
 
     # The repeated form is to get around an occasional OS X issue
     # where the form is repeated.
     # https://github.com/kanaka/mal/issues/30
-    expects = [".*%s%s%s" % (sep, t.out, re.escape(t.ret)),
-               ".*%s.*%s%s%s" % (sep, sep, t.out, re.escape(t.ret))]
+    expects = [
+        f".*{sep}{t.out}{re.escape(t.ret)}",
+        f".*{sep}.*{sep}{t.out}{re.escape(t.ret)}",
+    ]
+
 
     r.writeline(t.form)
     try:
@@ -296,7 +298,7 @@ while t.next():
         res = r.read_to_prompt(['\r\n[^\s()<>]+> ', '\n[^\s()<>]+> '],
                                 timeout=args.test_timeout)
         #print "%s,%s,%s" % (idx, repr(p.before), repr(p.after))
-        if (res == None):
+        if res is None:
             log(" -> TIMEOUT (line %d)" % t.line_num)
             raise TestTimeout("TIMEOUT (line %d)" % t.line_num)
         elif (t.ret == "" and t.out == ""):
@@ -315,8 +317,8 @@ while t.next():
                 log(" -> FAIL (line %d):" % t.line_num)
                 fail_cnt += 1
                 fail_type = ""
-            log("    Expected : %s" % repr(expects[0]))
-            log("    Got      : %s" % repr(res))
+            log(f"    Expected : {repr(expects[0])}")
+            log(f"    Got      : {repr(res)}")
             failed_test = """%sFAILED TEST (line %d): %s -> [%s,%s]:
     Expected : %s
     Got      : %s""" % (fail_type, t.line_num, t.form, repr(t.out),
@@ -328,7 +330,7 @@ while t.next():
         log("Output before exception:\n%s" % r.buf)
         sys.exit(1)
 
-if len(failures) > 0:
+if failures:
     log("\nFAILURES:")
     for f in failures:
         log(f)

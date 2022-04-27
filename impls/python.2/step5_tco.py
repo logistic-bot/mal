@@ -37,9 +37,10 @@ def eval_ast(ast: MalExpression, env: Env) -> MalExpression:
     if isinstance(ast, MalVector):
         return MalVector([EVAL(x, env) for x in ast.native()])
     if isinstance(ast, MalHash_map):
-        new_dict: Dict[str, MalExpression] = {}
-        for key in ast.native():
-            new_dict[key] = EVAL(ast.native()[key], env)
+        new_dict: Dict[str, MalExpression] = {
+            key: EVAL(ast.native()[key], env) for key in ast.native()
+        }
+
         return MalHash_map(new_dict)
     return ast
 
@@ -139,6 +140,6 @@ if __name__ == "__main__":
             except MalUnknownSymbolException as e:
                 print("'" + e.func + "' not found")
             except MalSyntaxException as e:
-                print("ERROR: invalid syntax: " + str(e))
+                print(f"ERROR: invalid syntax: {str(e)}")
         except EOFError:
             eof = True

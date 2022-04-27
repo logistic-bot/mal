@@ -26,7 +26,7 @@ def parse_args():
                         help='Do not combine lines using the ":" separator')
 
     args = parser.parse_args()
-    args.full_mode = "%s-%s" % (args.mode, args.sub_mode)
+    args.full_mode = f"{args.mode}-{args.sub_mode}"
     if args.keep_rems and not args.skip_combine_lines:
         debug("Option --keep-rems implies --skip-combine-lines ")
         args.skip_combine_lines = True
@@ -44,10 +44,11 @@ def resolve_includes(orig_lines, args):
     position = 0
     while position < len(lines):
         line = lines[position]
-        m = re.match(r"^(?:#([^ ]*) )? *REM \$INCLUDE: '([^'\n]*)' *$", line)
-        if m:
-            mode = m.group(1)
-            f = m.group(2)
+        if m := re.match(
+            r"^(?:#([^ ]*) )? *REM \$INCLUDE: '([^'\n]*)' *$", line
+        ):
+            mode = m[1]
+            f = m[2]
             if mode and mode != args.mode and mode != args.full_mode:
                 position += 1
             elif f not in included:
@@ -56,7 +57,7 @@ def resolve_includes(orig_lines, args):
                 lines[position:position+1] = ilines
                 if args.keep_rems: lines.append("REM ^^^ END '%s' ^^^" % f)
             else:
-                debug("Ignoring already included file: %s" % f)
+                debug(f"Ignoring already included file: {f}")
         else:
             position += 1
     return lines
@@ -64,22 +65,15 @@ def resolve_includes(orig_lines, args):
 def resolve_mode(orig_lines, args):
     lines = []
     for line in orig_lines:
-        m = re.match(r"^ *#([^ \n]*) *([^\n]*)$", line)
-        if m:
-            if m.group(1) == args.mode:
-                lines.append(m.group(2))
-            elif m.group(1) == args.full_mode:
-                lines.append(m.group(2))
+        if m := re.match(r"^ *#([^ \n]*) *([^\n]*)$", line):
+            if m[1] in [args.mode, args.full_mode]:
+                lines.append(m[2])
             continue
         lines.append(line)
     return lines
 
 def drop_blank_lines(orig_lines):
-    lines = []
-    for line in orig_lines:
-        if re.match(r"^\W*$", line): continue
-        lines.append(line)
-    return lines
+    return [line for line in orig_lines if not re.match(r"^\W*$", line)]
 
 
 def drop_rems(orig_lines):
@@ -87,9 +81,8 @@ def drop_rems(orig_lines):
     for line in orig_lines:
         if re.match(r"^ *REM", line):
             continue
-        m = re.match(r"^(.*): *REM .*$", line)
-        if m:
-            lines.append(m.group(1))
+        if m := re.match(r"^(.*): *REM .*$", line):
+            lines.append(m[1])
         else:
             lines.append(line)
     return lines
@@ -98,7 +91,7 @@ def remove_indent(orig_lines):
     lines = []
     for line in orig_lines:
         m = re.match(r"^ *([^ \n].*)$", line)
-        lines.append(m.group(1))
+        lines.append(m[1])
     return lines
 
 def misc_fixups(orig_lines):
@@ -250,7 +243,7 @@ def finalize(lines, args):
         def renum(line):
             lnum = len(lines)+1
             renumber[old_num] = lnum
-            return "%s %s" % (lnum, line)
+            return f"{lnum} {line}"
         while pos < len(src_lines):
             line = src_lines[pos]
             m = re.match(r"^([0-9]*) (.*)$", line)
@@ -313,24 +306,24 @@ if __name__ == '__main__':
     # read in lines
     lines = [l.rstrip() for f in args.infiles
             for l in open(f).readlines()]
-    debug("Original lines: %s" % len(lines))
+    debug(f"Original lines: {len(lines)}")
 
     # pull in include files
     lines = resolve_includes(lines, args)
-    debug("Lines after includes: %s" % len(lines))
+    debug(f"Lines after includes: {len(lines)}")
 
     lines = resolve_mode(lines, args)
-    debug("Lines after resolving mode specific lines: %s" % len(lines))
+    debug(f"Lines after resolving mode specific lines: {len(lines)}")
 
     # drop blank lines
     if not args.keep_blank_lines:
         lines = drop_blank_lines(lines)
-        debug("Lines after dropping blank lines: %s" % len(lines))
+        debug(f"Lines after dropping blank lines: {len(lines)}")
 
     # keep/drop REMs
     if not args.keep_rems:
         lines = drop_rems(lines)
-        debug("Lines after dropping REMs: %s" % len(lines))
+        debug(f"Lines after dropping REMs: {len(lines)}")
 
     # keep/remove the indenting
     if not args.keep_indent:
@@ -342,6 +335,6 @@ if __name__ == '__main__':
 
     # number lines, drop/keep labels, combine lines
     lines = finalize(lines, args)
-    debug("Lines after finalizing: %s" % len(lines))
+    debug(f"Lines after finalizing: {len(lines)}")
 
     print("\n".join(lines))

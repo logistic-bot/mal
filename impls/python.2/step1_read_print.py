@@ -20,7 +20,7 @@ def rep(x: str) -> str:
     try:
         return PRINT(EVAL(READ(x)))
     except BaseException:
-        return "Expression is invalid or unbalanced: " + x
+        return f"Expression is invalid or unbalanced: {x}"
 
 
 if __name__ == "__main__":
@@ -33,6 +33,6 @@ if __name__ == "__main__":
             try:
                 print(rep(line))
             except MalSyntaxException as e:
-                print("ERROR: invalid syntax: " + str(e))
+                print(f"ERROR: invalid syntax: {str(e)}")
         except EOFError:
             eof = True

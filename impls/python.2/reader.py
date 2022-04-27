@@ -118,18 +118,17 @@ class ReadASTVisitor(PTNodeVisitor):
         result = ""
         while i < len(val):
             if val[i] == "\\":
-                if (i + 1) < len(val):
-                    if val[i + 1] == "n":
-                        result += "\n"
-                    elif val[i + 1] == "\\":
-                        result += "\\"
-                    elif val[i + 1] == '"':
-                        result += '"'
-                    i += 2
-                else:
+                if i + 1 >= len(val):
                     raise MalSyntaxException(
                         "unbalanced string or invalid escape sequence"
                     )
+                if val[i + 1] == "n":
+                    result += "\n"
+                elif val[i + 1] == "\\":
+                    result += "\\"
+                elif val[i + 1] == '"':
+                    result += '"'
+                i += 2
             else:
                 result += val[i]
                 i += 1

@@ -13,10 +13,7 @@ class Reader():
         return self.tokens[self.position-1]
 
     def peek(self):
-        if len(self.tokens) > self.position:
-            return self.tokens[self.position]
-        else:
-            return None
+        return self.tokens[self.position] if len(self.tokens) > self.position else None
 
 def tokenize(str):
     tre = re.compile(r"""[\s,]*(~@|[\[\]{}()'`~^@]|"(?:[\\].|[^\\"])*"?|;.*|[^\s\[\]{}()'"`@,;]+)""");

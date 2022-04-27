@@ -22,17 +22,11 @@ class Reader():
         return self.tokens[self.position-1]
 
     def peek(self):
-        if len(self.tokens) > self.position:
-            return self.tokens[self.position]
-        else:
-            return None
+        return self.tokens[self.position] if len(self.tokens) > self.position else None
 
 def tokenize(str):
     re_str = "[\s,]*(~@|[\[\]{}()'`~^@]|\"(?:[\\\\].|[^\\\\\"])*\"?|;.*|[^\s\[\]{}()'\"`@,;]+)"
-    if IS_RPYTHON:
-        tok_re = re_str
-    else:
-        tok_re = re.compile(re_str)
+    tok_re = re_str if IS_RPYTHON else re.compile(re_str)
     return [t for t in re.findall(tok_re, str) if t[0] != ';']
 
 def read_atom(reader):
@@ -46,18 +40,16 @@ def read_atom(reader):
         str_re = re.compile('"(?:[\\\\].|[^\\\\"])*"')
     token = reader.next()
     if re.match(int_re, token):     return MalInt(int(token))
-##    elif re.match(float_re, token): return int(token)
     elif re.match(str_re, token):
         end = len(token)-1
         if end <= 1:
             return MalStr(u"")
-        else:
-            s = unicode(token[1:end])
-            s = types._replace(u'\\\\',   u"\u029e", s)
-            s = types._replace(u'\\"',    u'"', s)
-            s = types._replace(u'\\n',    u"\n", s)
-            s = types._replace(u"\u029e", u"\\", s)
-            return MalStr(s)
+        s = unicode(token[1:end])
+        s = types._replace(u'\\\\',   u"\u029e", s)
+        s = types._replace(u'\\"',    u'"', s)
+        s = types._replace(u'\\n',    u"\n", s)
+        s = types._replace(u"\u029e", u"\\", s)
+        return MalStr(s)
     elif token[0] == '"':
         types.throw_str("expected '\"', got EOF")
     elif token[0] == ':':           return _keywordu(unicode(token[1:]))

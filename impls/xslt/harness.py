@@ -80,7 +80,6 @@ def serve_one_request(res):
                 # stdout.write(' = ' + str(int(x)))
                 with open('xsl_input-string', 'w') as fx:
                     fx.write(str(int(x)))
-            # stdout.write('\n')
             elif req.attrib['kind'] == 'xpath-eval':
                 xpath = req.attrib['value']
                 with open('xsl-eval.xslt', 'w') as f:
@@ -88,7 +87,9 @@ def serve_one_request(res):
                 with open('xsl-null.xml', 'w') as f:
                     f.write(req.attrib['context'])
 
-                if os.system(f'saxon -xsl:xsl-eval.xslt -s:xsl-null.xml > xsl-eval_output.xml'):
+                if os.system(
+                    'saxon -xsl:xsl-eval.xslt -s:xsl-null.xml > xsl-eval_output.xml'
+                ):
                     x = ''
                 else:
                     with open('xsl-eval_output.xml', 'r') as f:
@@ -97,7 +98,7 @@ def serve_one_request(res):
                     fx.write(x)
             else:
                 stdout.write("UNKNOWN REQUEST " + req.attrib['kind'])
-            # stdout.write('\n')
+                    # stdout.write('\n')
     except Exception as e:
         # if str(e) != 'no element found: line 1, column 0':
         #     f.seek(0)
@@ -123,8 +124,7 @@ def transform(do_print=True):
                 if HALT:
                     os.kill(THE_PID, 9)
                     raise KeyboardInterrupt()
-                cmd = get_one(fd)
-                if cmd:
+                if cmd := get_one(fd):
                     serve_one_request(cmd)
             except KeyboardInterrupt:
                 exit()

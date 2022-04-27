@@ -52,7 +52,7 @@ repl_env['/'] = lambda a,b: int(a/b)
 while True:
     try:
         line = mal_readline.readline("user> ")
-        if line == None: break
+        if line is None: break
         if line == "": continue
         print(REP(line))
     except reader.Blank: continue

@@ -52,9 +52,8 @@ def quasiquote(ast):
 def is_macro_call(ast, env):
     if types._list_Q(ast):
         a0 = ast[0]
-        if isinstance(a0, MalSym):
-            if not env.find(a0) is None:
-                return env.get(a0).ismacro
+        if isinstance(a0, MalSym) and env.find(a0) is not None:
+            return env.get(a0).ismacro
     return False
 
 def macroexpand(ast, env):
@@ -69,19 +68,13 @@ def eval_ast(ast, env):
         assert isinstance(ast, MalSym)
         return env.get(ast)
     elif types._list_Q(ast):
-        res = []
-        for a in ast.values:
-            res.append(EVAL(a, env))
+        res = [EVAL(a, env) for a in ast.values]
         return MalList(res)
     elif types._vector_Q(ast):
-        res = []
-        for a in ast.values:
-            res.append(EVAL(a, env))
+        res = [EVAL(a, env) for a in ast.values]
         return MalVector(res)
     elif types._hash_map_Q(ast):
-        new_dct = {}
-        for k in ast.dct.keys():
-            new_dct[k] = EVAL(ast.dct[k], env)
+        new_dct = {k: EVAL(ast.dct[k], env) for k in ast.dct.keys()}
         return MalHashMap(new_dct)
     else:
         return ast  # primitive value, return unchanged
@@ -99,59 +92,54 @@ def EVAL(ast, env):
             return eval_ast(ast, env)
         if len(ast) == 0: return ast
         a0 = ast[0]
-        if isinstance(a0, MalSym):
-            a0sym = a0.value
-        else:
-            a0sym = u"__<*fn*>__"
-
-        if u"def!" == a0sym:
+        a0sym = a0.value if isinstance(a0, MalSym) else u"__<*fn*>__"
+        if a0sym == u"def!":
             a1, a2 = ast[1], ast[2]
             res = EVAL(a2, env)
             return env.set(a1, res)
-        elif u"let*" == a0sym:
+        elif a0sym == u"let*":
             a1, a2 = ast[1], ast[2]
             let_env = Env(env)
             for i in range(0, len(a1), 2):
                 let_env.set(a1[i], EVAL(a1[i+1], let_env))
             ast = a2
             env = let_env # Continue loop (TCO)
-        elif u"quote" == a0sym:
+        elif a0sym == u"quote":
             return ast[1]
-        elif u"quasiquoteexpand" == a0sym:
+        elif a0sym == u"quasiquoteexpand":
             return quasiquote(ast[1])
-        elif u"quasiquote" == a0sym:
+        elif a0sym == u"quasiquote":
             ast = quasiquote(ast[1]) # Continue loop (TCO)
-        elif u"defmacro!" == a0sym:
+        elif a0sym == u"defmacro!":
             func = EVAL(ast[2], env)
             func.ismacro = True
             return env.set(ast[1], func)
-        elif u"macroexpand" == a0sym:
+        elif a0sym == u"macroexpand":
             return macroexpand(ast[1], env)
-        elif u"try*" == a0sym:
+        elif a0sym == u"try*":
             if len(ast) < 3:
                 return EVAL(ast[1], env);
             a1, a2 = ast[1], ast[2]
             a20 = a2[0]
-            if isinstance(a20, MalSym):
-                if a20.value == u"catch*":
-                    try:
-                        return EVAL(a1, env);
-                    except types.MalException as exc:
-                        exc = exc.object
-                        catch_env = Env(env, _list(a2[1]), _list(exc))
-                        return EVAL(a2[2], catch_env)
-                    except Exception as exc:
-                        exc = MalStr(unicode("%s" % exc))
-                        catch_env = Env(env, _list(a2[1]), _list(exc))
-                        return EVAL(a2[2], catch_env)
+            if isinstance(a20, MalSym) and a20.value == u"catch*":
+                try:
+                    return EVAL(a1, env);
+                except types.MalException as exc:
+                    exc = exc.object
+                    catch_env = Env(env, _list(a2[1]), _list(exc))
+                    return EVAL(a2[2], catch_env)
+                except Exception as exc:
+                    exc = MalStr(unicode(f"{exc}"))
+                    catch_env = Env(env, _list(a2[1]), _list(exc))
+                    return EVAL(a2[2], catch_env)
             return EVAL(a1, env);
-        elif u"do" == a0sym:
+        elif a0sym == u"do":
             if len(ast) == 0:
                 return nil
             elif len(ast) > 1:
                 eval_ast(ast.slice2(1, len(ast)-1), env)
             ast = ast[-1] # Continue loop (TCO)
-        elif u"if" == a0sym:
+        elif a0sym == u"if":
             a1, a2 = ast[1], ast[2]
             cond = EVAL(a1, env)
             if cond is nil or cond is false:
@@ -159,20 +147,18 @@ def EVAL(ast, env):
                 else:            return nil
             else:
                 ast = a2 # Continue loop (TCO)
-        elif u"fn*" == a0sym:
+        elif a0sym == u"fn*":
             a1, a2 = ast[1], ast[2]
             return MalFunc(None, a2, env, a1, EVAL)
         else:
             el = eval_ast(ast, env)
             f = el.values[0]
-            if isinstance(f, MalFunc):
-                if f.ast:
-                    ast = f.ast
-                    env = f.gen_env(el.rest()) # Continue loop (TCO)
-                else:
-                    return f.apply(el.rest())
-            else:
-                raise Exception("%s is not callable" % f)
+            if not isinstance(f, MalFunc):
+                raise Exception(f"{f} is not callable")
+            if not f.ast:
+                return f.apply(el.rest())
+            ast = f.ast
+            env = f.gen_env(el.rest()) # Continue loop (TCO)
 
 # print
 def PRINT(exp):

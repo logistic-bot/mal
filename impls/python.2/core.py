@@ -42,9 +42,7 @@ def println(args: List[MalExpression]) -> MalNil:
 
 
 def list_q(x: MalExpression) -> MalBoolean:
-    if isinstance(x, MalList):
-        return MalBoolean(True)
-    return MalBoolean(False)
+    return MalBoolean(True) if isinstance(x, MalList) else MalBoolean(False)
 
 
 def empty_q(x: MalExpression) -> MalBoolean:
@@ -54,7 +52,7 @@ def empty_q(x: MalExpression) -> MalBoolean:
 
 
 def count(x: MalExpression) -> MalInt:
-    if isinstance(x, MalList) or isinstance(x, MalVector):
+    if isinstance(x, (MalList, MalVector)):
         return MalInt(len(x.native()))
     elif isinstance(x, MalNil):
         return MalInt(0)
@@ -62,14 +60,14 @@ def count(x: MalExpression) -> MalInt:
 
 
 def equal(a: MalExpression, b: MalExpression) -> MalBoolean:
-    if (isinstance(a, MalList) or isinstance(a, MalVector)) and (
-        isinstance(b, MalList) or isinstance(b, MalVector)
+    if isinstance(a, (MalList, MalVector)) and isinstance(
+        b, (MalList, MalVector)
     ):
         a_native = a.native()
         b_native = b.native()
         if len(a_native) != len(b_native):
             return MalBoolean(False)
-        for x in range(0, len(a_native)):
+        for x in range(len(a_native)):
             if not equal(a_native[x], b_native[x]):
                 return MalBoolean(False)
         return MalBoolean(True)
@@ -96,8 +94,7 @@ def less_equal(a: MalExpression, b: MalExpression) -> MalBoolean:
 
 def read_string(a: MalExpression) -> MalExpression:
     if isinstance(a, MalString):
-        result = reader.read(a.native())
-        return result
+        return reader.read(a.native())
     raise MalInvalidArgumentException(a, "not a string")
 
 
@@ -109,9 +106,7 @@ def slurp(filename: MalExpression) -> MalString:
 
 
 def core_str(args: List[MalExpression]) -> MalString:
-    result = ""
-    for a in args:
-        result += a.unreadable_str()
+    result = "".join(a.unreadable_str() for a in args)
     return MalString(result)
 
 
@@ -127,19 +122,19 @@ def reset(atom: MalExpression, val: MalExpression) -> MalExpression:
 
 
 def vec(arg: MalExpression) -> MalExpression:
-    assert isinstance(arg, MalList) or isinstance(arg, MalVector)
+    assert isinstance(arg, (MalList, MalVector))
     return MalVector(arg.native ())
 
 
 def cons(first: MalExpression, rest: MalExpression) -> MalExpression:
-    assert isinstance(rest, MalList) or isinstance(rest, MalVector)
+    assert isinstance(rest, (MalList, MalVector))
     return MalList([first] + rest.native())
 
 
 def concat(args: List[MalExpression]) -> MalExpression:
     result_list: List[MalExpression] = []
     for x in args:
-        assert isinstance(x, MalList) or isinstance(x, MalVector)
+        assert isinstance(x, (MalList, MalVector))
         result_list = result_list + x.native()
     return MalList(result_list)
 
@@ -154,7 +149,7 @@ def not_(expr: MalExpression) -> MalExpression:
 
 
 def nth(list_: MalExpression, index: MalExpression) -> MalExpression:
-    assert isinstance(list_, MalList) or isinstance(list_, MalVector)
+    assert isinstance(list_, (MalList, MalVector))
     assert isinstance(index, MalInt)
     list_native = list_.native()
     if index.native() > len(list_native) - 1:
@@ -164,19 +159,17 @@ def nth(list_: MalExpression, index: MalExpression) -> MalExpression:
 
 def apply(args: List[MalExpression]) -> MalExpression:
     func = args[0]
-    assert isinstance(func, MalFunctionCompiled) or isinstance(func, MalFunctionRaw)
-    rest_args: List[MalExpression] = []
-    for i in range(1, len(args) - 1):
-        rest_args.append(args[i])
-    last_arg = args[len(args) - 1]
-    assert isinstance(last_arg, MalList) or isinstance(last_arg, MalVector)
-    rest_args = rest_args + last_arg.native()
+    assert isinstance(func, (MalFunctionCompiled, MalFunctionRaw))
+    rest_args: List[MalExpression] = [args[i] for i in range(1, len(args) - 1)]
+    last_arg = args[-1]
+    assert isinstance(last_arg, (MalList, MalVector))
+    rest_args += last_arg.native()
     return func.call(rest_args)
 
 
 def map_(func: MalExpression, map_list: MalExpression) -> MalExpression:
-    assert isinstance(func, MalFunctionCompiled) or isinstance(func, MalFunctionRaw)
-    assert isinstance(map_list, MalList) or isinstance(map_list, MalVector)
+    assert isinstance(func, (MalFunctionCompiled, MalFunctionRaw))
+    assert isinstance(map_list, (MalList, MalVector))
     result_list: List[MalExpression] = []
     for i in range(len(map_list.native())):
         elem = map_list.native()[i]
@@ -239,17 +232,12 @@ def get(map: MalExpression, key: MalExpression) -> MalExpression:
         return MalNil()
     if not isinstance(map, MalHash_map):
         raise MalInvalidArgumentException(map, "not a hash map")
-    if key.native() in map.native():
-        return map.native()[key.native()]
-    else:
-        return MalNil()
+    return map.native()[key.native()] if key.native() in map.native() else MalNil()
 
 
 def first(args: List[MalExpression]) -> MalExpression:
     try:
-        if isinstance(args[0], MalNil):
-            return MalNil()
-        return args[0].native()[0]
+        return MalNil() if isinstance(args[0], MalNil) else args[0].native()[0]
     except IndexError:
         return MalNil()
     except TypeError:
@@ -274,7 +262,7 @@ def map_q(arg: MalExpression) -> MalExpression:
 
 
 def sequential_q(arg: MalExpression) -> MalExpression:
-    return MalBoolean(isinstance(arg, MalList) or isinstance(arg, MalVector))
+    return MalBoolean(isinstance(arg, (MalList, MalVector)))
 
 
 def vector(args: List[MalExpression]) -> MalExpression:
@@ -291,7 +279,7 @@ def hash_map(args: List[MalExpression]) -> MalExpression:
 
 
 def assoc(args: List[MalExpression]) -> MalExpression:
-    if len(args) == 0:
+    if not args:
         raise MalInvalidArgumentException(MalNil(), "no arguments supplied to assoc")
     elif len(args) == 1:
         return args[0]
@@ -335,7 +323,7 @@ def vals(args: List[MalExpression]) -> MalExpression:
 
 
 def dissoc(args: List[MalExpression]) -> MalExpression:
-    if len(args) == 0:
+    if not args:
         raise MalInvalidArgumentException(MalNil(), "no arguments supplied to dissoc")
     elif len(args) == 1:
         return args[0]
@@ -355,7 +343,7 @@ def swap(args: List[MalExpression]) -> MalExpression:
     atom = args[0]
     assert isinstance(atom, MalAtom)
     func = args[1]
-    assert isinstance(func, MalFunctionCompiled) or isinstance(func, MalFunctionRaw)
+    assert isinstance(func, (MalFunctionCompiled, MalFunctionRaw))
     atom.reset(func.call([atom.native()] + args[2:]))
     return atom.native()
 

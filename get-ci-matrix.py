@@ -13,19 +13,19 @@ RE_IMPL = re.compile(r'^impls/(?!lib|tests)([^/]*)/')
 OVERRIDE_IMPLS = os.environ.get('OVERRIDE_IMPLS', '').split()
 
 def impl_text(impl):
-    s = "IMPL=%s" % impl['IMPL']
+    s = f"IMPL={impl['IMPL']}"
     for k, v in impl.items():
         if k == 'IMPL': continue
-        s += " %s=%s" % (k, v)
+        s += f" {k}={v}"
     return s
 
 all_changes = sys.argv[1:]
 # code changes that are not just to docs
-code_changes = set([c for c in all_changes if not RE_IGNORE.search(c)])
+code_changes = {c for c in all_changes if not RE_IGNORE.search(c)}
 # actual changes to implementations
-impl_changes = set([c for c in all_changes if RE_IMPL.search(c)])
+impl_changes = {c for c in all_changes if RE_IMPL.search(c)}
 # names of changed implementations
-run_impls = set([RE_IMPL.search(c).groups()[0] for c in impl_changes])
+run_impls = {RE_IMPL.search(c).groups()[0] for c in impl_changes}
 
 do_full = (len(code_changes) != len(impl_changes))
 
@@ -37,11 +37,11 @@ if OVERRIDE_IMPLS:
         do_full = True
 
 
-print("OVERRIDE_IMPLS: %s" % OVERRIDE_IMPLS)
+print(f"OVERRIDE_IMPLS: {OVERRIDE_IMPLS}")
 print("code_changes: %s (%d)" % (code_changes, len(code_changes)))
 print("impl_changes: %s (%d)" % (impl_changes, len(impl_changes)))
 print("run_impls: %s (%d)" % (run_impls, len(run_impls)))
-print("do_full: %s" % do_full)
+print(f"do_full: {do_full}")
 
 # Load the full implementation description file
 all_impls = yaml.safe_load(open(IMPLS_FILE))
@@ -60,7 +60,7 @@ for impl in all_impls['IMPL']:
     elif do_full:
         targ.append(impl_text(impl))
 
-print("::set-output name=do-linux::%s" % json.dumps(len(linux_impls)>0))
-print("::set-output name=do-macos::%s" % json.dumps(len(macos_impls)>0))
+print(f"::set-output name=do-linux::{json.dumps(len(linux_impls)>0)}")
+print(f"::set-output name=do-macos::{json.dumps(len(macos_impls)>0)}")
 print("::set-output name=linux::{\"IMPL\":%s}" % json.dumps(linux_impls))
 print("::set-output name=macos::{\"IMPL\":%s}" % json.dumps(macos_impls))

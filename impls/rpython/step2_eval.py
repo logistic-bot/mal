@@ -19,36 +19,30 @@ def eval_ast(ast, env):
         else:
             raise Exception(u"'" + ast.value + u"' not found")
     elif types._list_Q(ast):
-        res = []
-        for a in ast.values:
-            res.append(EVAL(a, env))
+        res = [EVAL(a, env) for a in ast.values]
         return MalList(res)
     elif types._vector_Q(ast):
-        res = []
-        for a in ast.values:
-            res.append(EVAL(a, env))
+        res = [EVAL(a, env) for a in ast.values]
         return MalVector(res)
     elif types._hash_map_Q(ast):
-        new_dct = {}
-        for k in ast.dct.keys():
-            new_dct[k] = EVAL(ast.dct[k], env)
+        new_dct = {k: EVAL(ast.dct[k], env) for k in ast.dct.keys()}
         return MalHashMap(new_dct)
     else:
         return ast  # primitive value, return unchanged
 
 def EVAL(ast, env):
-        #print("EVAL %s" % printer._pr_str(ast))
-        if not types._list_Q(ast):
-            return eval_ast(ast, env)
+    #print("EVAL %s" % printer._pr_str(ast))
+    if not types._list_Q(ast):
+        return eval_ast(ast, env)
 
-        # apply list
-        if len(ast) == 0: return ast
-        el = eval_ast(ast, env)
-        f = el.values[0]
-        if isinstance(f, MalFunc):
-            return f.apply(el.values[1:])
-        else:
-            raise Exception("%s is not callable" % f)
+    # apply list
+    if len(ast) == 0: return ast
+    el = eval_ast(ast, env)
+    f = el.values[0]
+    if isinstance(f, MalFunc):
+        return f.apply(el.values[1:])
+    else:
+        raise Exception(f"{f} is not callable")
 
 # print
 def PRINT(exp):
@@ -95,10 +89,10 @@ def entry_point(argv):
         except reader.Blank:
             continue
         except types.MalException as e:
-            print(u"Error: %s" % printer._pr_str(e.object, False))
+            print(f"Error: {printer._pr_str(e.object, False)}")
         except Exception as e:
-            print("Error: %s" % e)
-            #print("".join(traceback.format_exception(*sys.exc_info())))
+            print(f"Error: {e}")
+                    #print("".join(traceback.format_exception(*sys.exc_info())))
     return 0
 
 # _____ Define and setup target ___
