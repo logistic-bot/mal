@@ -1,16 +1,20 @@
-fn main() {
-    use std::io::BufRead;
-    use std::io::Write;
-    let stdin = std::io::stdin();
-    let stdout = std::io::stdout();
+use color_eyre::Result;
+
+fn main() -> Result<()> {
+    let mut rl = rustyline::Editor::<()>::new()?;
+    let _ = rl.load_history(".lisphistory.txt");
 
     loop {
-        print!("user> ");
-        stdout.lock().flush().unwrap();
-        let line = stdin.lock().lines().next().unwrap().unwrap();
-
-        println!("{}", read_eval_print(line));
+        let readline = rl.readline("user> ");
+        match readline {
+            Ok(line) => {
+                println!("{}", read_eval_print(line));
+            }
+            Err(_) => break,
+        }
     }
+
+    Ok(())
 }
 
 fn read_eval_print(s: String) -> String {
