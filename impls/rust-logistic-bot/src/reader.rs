@@ -2,7 +2,7 @@ use crate::atom::Atom;
 
 pub enum ParseError {
     UnexpectedEndOfFile,
-    UnbalencedParenthesis,
+    Unbalenced,
 }
 
 /// Stores the tokens and a position
@@ -74,7 +74,7 @@ fn read_list(reader: &mut Reader, end_marker: &str) -> Result<Vec<Atom>, ParseEr
                 res.push(read_form(reader)?);
             }
         } else {
-            return Err(ParseError::UnbalencedParenthesis);
+            return Err(ParseError::Unbalenced);
         }
     }
     Ok(res)

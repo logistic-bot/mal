@@ -25,7 +25,7 @@ fn read_eval_print(s: String) -> String {
         Err(e) => {
             return match e {
                 ParseError::UnexpectedEndOfFile => String::from("unexpected end of input"),
-                ParseError::UnbalencedParenthesis => String::from("unbalanced parenthesis"),
+                ParseError::Unbalenced => String::from("unbalanced"),
             }
         }
     };
@@ -41,5 +41,6 @@ fn eval(atom: Atom) -> Atom {
 }
 
 fn print(atom: Atom) -> String {
+    dbg!(&atom);
     atom.to_string()
 }
