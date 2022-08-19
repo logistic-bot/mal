@@ -6,4 +6,5 @@ default-run = "step0_repl"
 
 [dependencies]
 color-eyre = "0.6.2"
+regex = { version = "1.6.0", features = ["pattern"] }
 rustyline = "10.0.0"
