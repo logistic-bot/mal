@@ -1,13 +1,16 @@
 use std::collections::BTreeMap;
 
-use color_eyre::Result;
+use color_eyre::{
+    eyre::{eyre, ContextCompat},
+    Result,
+};
 use mal::{
-    atom::{Atom, RunTimeError},
+    atom::Atom,
     env::{default_env, Env},
-    reader::ParseError,
 };
 
 fn main() -> Result<()> {
+    color_eyre::install()?;
     let mut rl = rustyline::Editor::<()>::new()?;
     let _ = rl.load_history(".lisphistory.txt");
 
@@ -32,35 +35,23 @@ fn read_eval_print(s: String) -> String {
     let atom = read(s);
     let atom = match atom {
         Ok(atom) => atom,
-        Err(e) => {
-            return match e {
-                ParseError::UnexpectedEndOfFile => String::from("unexpected end of input"),
-                ParseError::Unbalenced => String::from("unbalanced"),
-                ParseError::UnfinishedEscapeSequence => String::from("unbalanced"),
-                ParseError::UnsuportedEscapeSequence => String::from("unbalanced"),
-            }
-        }
+        Err(e) => return e.to_string(),
     };
     let result = eval(&atom, &env);
     let result = match result {
         Ok(result) => result,
         Err(e) => {
-            return String::from(match e {
-                RunTimeError::SymbolNotBound => "symbol not bound",
-                RunTimeError::NotAFunction => "not a function",
-                RunTimeError::WrongNumberArguments => "wrong number of arguments",
-                RunTimeError::WrongType => "wrong type of argument",
-            })
+            return e.to_string();
         }
     };
     print(result)
 }
 
-fn read(s: String) -> Result<Atom, ParseError> {
+fn read(s: String) -> Result<Atom> {
     mal::reader::read_str(s)
 }
 
-fn eval(ast: &Atom, env: &Env) -> Result<Atom, RunTimeError> {
+fn eval(ast: &Atom, env: &Env) -> Result<Atom> {
     match ast {
         Atom::List(lst) => {
             if lst.is_empty() {
@@ -72,7 +63,7 @@ fn eval(ast: &Atom, env: &Env) -> Result<Atom, RunTimeError> {
                         Atom::Builtin(builtin) => {
                             Ok(builtin(vec![lst[1].clone(), lst[2].clone()])?)
                         }
-                        _ => Err(RunTimeError::NotAFunction),
+                        a => Err(eyre!("expected a function or builtin as first element of list for list evaluation, but got {}, which is invalid", a)),
                     },
                     a => panic!("Expected a list, but got {} (this should never happen)", a),
                 }
@@ -82,21 +73,21 @@ fn eval(ast: &Atom, env: &Env) -> Result<Atom, RunTimeError> {
     }
 }
 
-fn eval_ast(ast: &Atom, env: &Env) -> Result<Atom, RunTimeError> {
+fn eval_ast(ast: &Atom, env: &Env) -> Result<Atom> {
     match ast {
         Atom::Symbol(sym) => env
             .get(sym)
-            .ok_or(RunTimeError::SymbolNotBound)
+            .context(format!("symbol {} is not bound to any value", sym))
             .map(|x| x.clone()),
         Atom::List(lst) => Ok(Atom::List(
             lst.iter()
                 .map(|x| eval(x, env))
-                .collect::<Result<Vec<Atom>, RunTimeError>>()?,
+                .collect::<Result<Vec<Atom>>>()?,
         )),
         Atom::Vector(lst) => Ok(Atom::Vector(
             lst.iter()
                 .map(|x| eval(x, env))
-                .collect::<Result<Vec<Atom>, RunTimeError>>()?,
+                .collect::<Result<Vec<Atom>>>()?,
         )),
         Atom::HashMap(map) => Ok(Atom::HashMap({
             let mut res = BTreeMap::new();
@@ -110,6 +101,5 @@ fn eval_ast(ast: &Atom, env: &Env) -> Result<Atom, RunTimeError> {
 }
 
 fn print(atom: Atom) -> String {
-    dbg!(&atom);
     atom.to_string()
 }

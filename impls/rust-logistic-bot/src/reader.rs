@@ -1,13 +1,10 @@
+use color_eyre::{
+    eyre::{eyre, ContextCompat, WrapErr},
+    Result,
+};
 use std::collections::BTreeMap;
 
 use crate::atom::Atom;
-
-pub enum ParseError {
-    UnexpectedEndOfFile,
-    Unbalenced,
-    UnfinishedEscapeSequence,
-    UnsuportedEscapeSequence,
-}
 
 /// Stores the tokens and a position
 struct Reader {
@@ -29,7 +26,7 @@ impl Reader {
     }
 }
 
-pub fn read_str(s: String) -> Result<Atom, ParseError> {
+pub fn read_str(s: String) -> Result<Atom> {
     let tokens = tokenize(s);
     let mut reader = Reader {
         tokens,
@@ -51,25 +48,30 @@ fn tokenize(haystack: String) -> Vec<String> {
         // this filters out empty strings that may have been create in the previous step
         .filter(|x| !x.is_empty())
         .collect::<Vec<_>>();
-    dbg!(&tokens);
     tokens
 }
 
-fn read_form(reader: &mut Reader) -> Result<Atom, ParseError> {
-    let token = reader.next().ok_or(ParseError::UnexpectedEndOfFile)?;
+fn read_form(reader: &mut Reader) -> Result<Atom> {
+    let token = reader.next().context("unexpected end of file")?;
     match token
         .chars()
         .next()
         .expect("Tokens should always have at least one character")
     {
-        '(' => Ok(Atom::List(read_list(reader, ")")?)),
+        '(' => Ok(Atom::List(
+            read_list(reader, ")").context("while reading list")?,
+        )),
         '[' => Ok(Atom::Vector(read_list(reader, "]")?)),
         '{' => {
             let lst = read_list(reader, "}")?;
             let mut map = BTreeMap::new();
             let mut lst = lst.into_iter();
             while let Some(key) = lst.next() {
-                map.insert(key, lst.next().ok_or(ParseError::Unbalenced)?);
+                map.insert(
+                    key,
+                    lst.next()
+                        .context("invalid hashmap: got a key without a value")?,
+                );
             }
             Ok(Atom::HashMap(map))
         }
@@ -77,7 +79,7 @@ fn read_form(reader: &mut Reader) -> Result<Atom, ParseError> {
             let mut chars = token.chars();
             chars.next();
             if chars.next_back() != Some('"') {
-                Err(ParseError::Unbalenced)
+                Err(eyre!("unclosed string"))
             } else {
                 let res = unescape(chars.as_str())?;
                 Ok(Atom::String(res))
@@ -110,20 +112,20 @@ fn read_form(reader: &mut Reader) -> Result<Atom, ParseError> {
 }
 
 /// inpired by <https://docs.rs/snailquote/latest/src/snailquote/lib.rs.html#231-308/>
-fn unescape(s: &str) -> Result<String, ParseError> {
+fn unescape(s: &str) -> Result<String> {
     let mut chars = s.chars();
     let mut res = String::with_capacity(s.len());
 
     while let Some(c) = chars.next() {
         if c == '\\' {
             match chars.next() {
-                None => return Err(ParseError::UnfinishedEscapeSequence),
+                None => return Err(eyre!("unfinished escape sequence")),
                 Some(c2) => {
                     res.push(match c2 {
                         '"' => '"',
                         '\'' => '\'',
                         '\\' => '\\',
-                        _ => return Err(ParseError::UnsuportedEscapeSequence),
+                        _ => return Err(eyre!("unsuported escape sequence")),
                     });
                 }
             }
@@ -136,7 +138,7 @@ fn unescape(s: &str) -> Result<String, ParseError> {
     Ok(res)
 }
 
-fn read_list(reader: &mut Reader, end_marker: &str) -> Result<Vec<Atom>, ParseError> {
+fn read_list(reader: &mut Reader, end_marker: &str) -> Result<Vec<Atom>> {
     let mut res = Vec::new();
     loop {
         let token = reader.peek();
@@ -145,17 +147,19 @@ fn read_list(reader: &mut Reader, end_marker: &str) -> Result<Vec<Atom>, ParseEr
                 reader.next();
                 break;
             } else {
-                res.push(read_form(reader)?);
+                res.push(read_form(reader).context("while reading form inside of list")?);
             }
         } else {
-            return Err(ParseError::Unbalenced);
+            return Err(eyre!(
+                "unexpected end of file while reading list (missing '{}')",
+                end_marker
+            ));
         }
     }
     Ok(res)
 }
 
 fn read_atom(token: &str) -> Atom {
-    dbg!(&token);
     match token.parse::<i64>() {
         Ok(num) => Atom::Integer(num),
         Err(_) => {

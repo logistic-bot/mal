@@ -1,5 +1,5 @@
 use color_eyre::Result;
-use mal::{atom::Atom, reader::ParseError};
+use mal::atom::Atom;
 
 fn main() -> Result<()> {
     let mut rl = rustyline::Editor::<()>::new()?;
@@ -24,19 +24,12 @@ fn read_eval_print(s: String) -> String {
     let atom = read(s);
     let atom = match atom {
         Ok(atom) => atom,
-        Err(e) => {
-            return match e {
-                ParseError::UnexpectedEndOfFile => String::from("unexpected end of input"),
-                ParseError::Unbalenced => String::from("unbalanced"),
-                ParseError::UnfinishedEscapeSequence => String::from("unbalanced"),
-                ParseError::UnsuportedEscapeSequence => String::from("unbalanced"),
-            }
-        }
+        Err(e) => return e.to_string(),
     };
     print(eval(atom))
 }
 
-fn read(s: String) -> Result<Atom, ParseError> {
+fn read(s: String) -> Result<Atom> {
     mal::reader::read_str(s)
 }
 

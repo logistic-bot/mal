@@ -1,11 +1,7 @@
 use std::collections::BTreeMap;
 
-pub enum RunTimeError {
-    SymbolNotBound,
-    NotAFunction,
-    WrongNumberArguments,
-    WrongType,
-}
+use color_eyre::eyre::eyre;
+use color_eyre::Result;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Atom {
@@ -16,14 +12,17 @@ pub enum Atom {
     Keyword(String),
     String(String),
     HashMap(BTreeMap<Atom, Atom>),
-    Builtin(fn(Vec<Atom>) -> Result<Atom, RunTimeError>),
+    Builtin(fn(Vec<Atom>) -> Result<Atom>),
 }
 
 impl Atom {
-    pub fn as_integer(&self) -> Result<i64, RunTimeError> {
+    pub fn as_integer(&self) -> Result<i64> {
         match self {
             Atom::Integer(num) => Ok(*num),
-            _ => Err(RunTimeError::WrongType),
+            a => Err(eyre!(
+                "type error: expected integer but got {}, which is the wrong type",
+                a
+            )),
         }
     }
 }
