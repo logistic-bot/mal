@@ -77,6 +77,10 @@ fn read_form(reader: &mut Reader) -> Result<Atom, ParseError> {
                 Atom::Symbol(String::from("quote")),
                 read_form(reader)?,
             ])),
+            "`" => Ok(Atom::List(vec![
+                Atom::Symbol(String::from("quasiquote")),
+                read_form(reader)?,
+            ])),
             _ => Ok(read_atom(token)),
         },
     }
