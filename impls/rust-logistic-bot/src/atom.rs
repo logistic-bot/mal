@@ -1,5 +1,12 @@
 use std::collections::BTreeMap;
 
+pub enum RunTimeError {
+    SymbolNotBound,
+    NotAFunction,
+    WrongNumberArguments,
+    WrongType,
+}
+
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Atom {
     List(Vec<Atom>),
@@ -9,6 +16,16 @@ pub enum Atom {
     Keyword(String),
     String(String),
     HashMap(BTreeMap<Atom, Atom>),
+    Builtin(fn(Vec<Atom>) -> Result<Atom, RunTimeError>),
+}
+
+impl Atom {
+    pub fn as_integer(&self) -> Result<i64, RunTimeError> {
+        match self {
+            Atom::Integer(num) => Ok(*num),
+            _ => Err(RunTimeError::WrongType),
+        }
+    }
 }
 
 impl std::fmt::Display for Atom {
@@ -33,7 +50,7 @@ impl std::fmt::Display for Atom {
                     .collect::<Vec<_>>()
                     .join(" ")
             ),
-            Atom::String(s) => write!(f, "\"{}\"", escape(s)),
+            Atom::String(s) => write!(f, r#""{}""#, escape(s)),
             Atom::HashMap(map) => {
                 write!(
                     f,
@@ -44,6 +61,7 @@ impl std::fmt::Display for Atom {
                         .join(" ")
                 )
             }
+            Atom::Builtin(b) => write!(f, "#<BUILTIN {:?}>", b),
         }
     }
 }
