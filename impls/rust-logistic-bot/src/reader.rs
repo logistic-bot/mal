@@ -3,6 +3,8 @@ use crate::atom::Atom;
 pub enum ParseError {
     UnexpectedEndOfFile,
     Unbalenced,
+    UnfinishedEscapeSequence,
+    UnsuportedEscapeSequence,
 }
 
 /// Stores the tokens and a position
@@ -40,13 +42,15 @@ fn tokenize(haystack: String) -> Vec<String> {
     )
     .unwrap();
 
-    haystack
+    let tokens = haystack
         .match_indices(&re)
         // this works around the regex somehow not correctly trimming ',' or spaces sometimes
         .map(|x| x.1.trim().trim_matches(|x| x == ',').trim().to_string())
         // this filters out empty strings that may have been create in the previous step
         .filter(|x| !x.is_empty())
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>();
+    dbg!(&tokens);
+    tokens
 }
 
 fn read_form(reader: &mut Reader) -> Result<Atom, ParseError> {
@@ -58,8 +62,45 @@ fn read_form(reader: &mut Reader) -> Result<Atom, ParseError> {
     {
         '(' => Ok(Atom::List(read_list(reader, ")")?)),
         '[' => Ok(Atom::Vector(read_list(reader, "]")?)),
+        '\"' => {
+            let mut chars = token.chars();
+            chars.next();
+            if chars.next_back() != Some('"') {
+                Err(ParseError::Unbalenced)
+            } else {
+                let res = unescape(chars.as_str())?;
+                Ok(Atom::String(res))
+            }
+        }
         _ => Ok(read_atom(token)),
     }
+}
+
+/// inpired by <https://docs.rs/snailquote/latest/src/snailquote/lib.rs.html#231-308/>
+fn unescape(s: &str) -> Result<String, ParseError> {
+    let mut chars = s.chars().enumerate();
+    let mut res = String::with_capacity(s.len());
+
+    while let Some((idx, c)) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                None => return Err(ParseError::UnfinishedEscapeSequence),
+                Some((idx, c2)) => {
+                    res.push(match c2 {
+                        '"' => '"',
+                        '\'' => '\'',
+                        '\\' => '\\',
+                        _ => return Err(ParseError::UnsuportedEscapeSequence),
+                    });
+                }
+            }
+            continue;
+        }
+
+        res.push(c)
+    }
+
+    Ok(res)
 }
 
 fn read_list(reader: &mut Reader, end_marker: &str) -> Result<Vec<Atom>, ParseError> {

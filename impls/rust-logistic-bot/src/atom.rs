@@ -4,6 +4,7 @@ pub enum Atom {
     Vector(Vec<Atom>),
     Integer(i64),
     Symbol(String),
+    String(String),
 }
 
 impl std::fmt::Display for Atom {
@@ -27,6 +28,24 @@ impl std::fmt::Display for Atom {
                     .collect::<Vec<_>>()
                     .join(" ")
             ),
+            Atom::String(s) => write!(f, "\"{}\"", escape(s)),
         }
     }
+}
+
+/// inspired by: <https://docs.rs/snailquote/latest/src/snailquote/lib.rs.html#231-308/>
+fn escape(s: &str) -> String {
+    let mut output = String::with_capacity(s.len());
+    for c in s.chars() {
+        let escape = match c {
+            '"' => true,
+            '\\' => true,
+            _ => false,
+        };
+        if escape {
+            output.push('\\');
+        }
+        output.push(c);
+    }
+    output
 }

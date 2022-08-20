@@ -28,6 +28,8 @@ fn read_eval_print(s: String) -> String {
             return match e {
                 ParseError::UnexpectedEndOfFile => String::from("unexpected end of input"),
                 ParseError::Unbalenced => String::from("unbalanced"),
+                ParseError::UnfinishedEscapeSequence => String::from("unbalanced"),
+                ParseError::UnsuportedEscapeSequence => String::from("unbalanced"),
             }
         }
     };
