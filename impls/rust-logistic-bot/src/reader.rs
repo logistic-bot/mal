@@ -143,6 +143,12 @@ fn read_atom(token: &str) -> Atom {
     dbg!(&token);
     match token.parse::<i64>() {
         Ok(num) => Atom::Integer(num),
-        Err(_) => Atom::Symbol(token.to_string()),
+        Err(_) => {
+            if token.starts_with(':') {
+                Atom::Keyword(token.chars().skip(1).collect())
+            } else {
+                Atom::Symbol(token.to_string())
+            }
+        }
     }
 }

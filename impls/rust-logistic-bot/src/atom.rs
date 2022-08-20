@@ -4,6 +4,7 @@ pub enum Atom {
     Vector(Vec<Atom>),
     Integer(i64),
     Symbol(String),
+    Keyword(String),
     String(String),
 }
 
@@ -11,6 +12,7 @@ impl std::fmt::Display for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Atom::Symbol(sym) => write!(f, "{}", sym),
+            Atom::Keyword(sym) => write!(f, ":{}", sym),
             Atom::Integer(num) => write!(f, "{}", num),
             Atom::List(list) => write!(
                 f,
