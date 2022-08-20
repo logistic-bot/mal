@@ -1,4 +1,6 @@
-#[derive(Clone, Debug)]
+use std::collections::BTreeMap;
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Atom {
     List(Vec<Atom>),
     Vector(Vec<Atom>),
@@ -6,6 +8,7 @@ pub enum Atom {
     Symbol(String),
     Keyword(String),
     String(String),
+    HashMap(BTreeMap<Atom, Atom>),
 }
 
 impl std::fmt::Display for Atom {
@@ -31,6 +34,16 @@ impl std::fmt::Display for Atom {
                     .join(" ")
             ),
             Atom::String(s) => write!(f, "\"{}\"", escape(s)),
+            Atom::HashMap(map) => {
+                write!(
+                    f,
+                    "{{{}}}",
+                    map.iter()
+                        .map(|(k, v)| format!("{} {}", k, v))
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                )
+            }
         }
     }
 }

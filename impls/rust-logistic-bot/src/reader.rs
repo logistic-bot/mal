@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::atom::Atom;
 
 pub enum ParseError {
@@ -62,6 +64,15 @@ fn read_form(reader: &mut Reader) -> Result<Atom, ParseError> {
     {
         '(' => Ok(Atom::List(read_list(reader, ")")?)),
         '[' => Ok(Atom::Vector(read_list(reader, "]")?)),
+        '{' => {
+            let lst = read_list(reader, "}")?;
+            let mut map = BTreeMap::new();
+            let mut lst = lst.into_iter();
+            while let Some(key) = lst.next() {
+                map.insert(key, lst.next().ok_or(ParseError::Unbalenced)?);
+            }
+            Ok(Atom::HashMap(map))
+        }
         '\"' => {
             let mut chars = token.chars();
             chars.next();
@@ -96,14 +107,14 @@ fn read_form(reader: &mut Reader) -> Result<Atom, ParseError> {
 
 /// inpired by <https://docs.rs/snailquote/latest/src/snailquote/lib.rs.html#231-308/>
 fn unescape(s: &str) -> Result<String, ParseError> {
-    let mut chars = s.chars().enumerate();
+    let mut chars = s.chars();
     let mut res = String::with_capacity(s.len());
 
-    while let Some((idx, c)) = chars.next() {
+    while let Some(c) = chars.next() {
         if c == '\\' {
             match chars.next() {
                 None => return Err(ParseError::UnfinishedEscapeSequence),
-                Some((idx, c2)) => {
+                Some(c2) => {
                     res.push(match c2 {
                         '"' => '"',
                         '\'' => '\'',
