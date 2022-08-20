@@ -9,12 +9,14 @@ fn main() -> Result<()> {
         let readline = rl.readline("user> ");
         match readline {
             Ok(line) => {
+                rl.add_history_entry(&line);
                 println!("{}", read_eval_print(line));
             }
             Err(_) => break,
         }
     }
 
+    let _ = rl.save_history(".lisphistory.txt");
     Ok(())
 }
 
