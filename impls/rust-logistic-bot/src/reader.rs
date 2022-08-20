@@ -72,7 +72,13 @@ fn read_form(reader: &mut Reader) -> Result<Atom, ParseError> {
                 Ok(Atom::String(res))
             }
         }
-        _ => Ok(read_atom(token)),
+        _ => match token {
+            "'" => Ok(Atom::List(vec![
+                Atom::Symbol(String::from("quote")),
+                read_form(reader)?,
+            ])),
+            _ => Ok(read_atom(token)),
+        },
     }
 }
 
@@ -122,6 +128,7 @@ fn read_list(reader: &mut Reader, end_marker: &str) -> Result<Vec<Atom>, ParseEr
 }
 
 fn read_atom(token: &str) -> Atom {
+    dbg!(&token);
     match token.parse::<i64>() {
         Ok(num) => Atom::Integer(num),
         Err(_) => Atom::Symbol(token.to_string()),
